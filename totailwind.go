@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/widget"
 	"golang.design/x/clipboard"
@@ -49,7 +50,9 @@ func main() {
 	fmt.Println("Czekam na skopiowanie CSS do schowka... (Ctrl+C aby wyjść)")
 
 	a := app.New()
-	w := a.NewWindow("Tailcrack")
+	w := a.NewWindow("FigTail siempre")
+	w.Resize(fyne.NewSize(640, 480))
+	w.CenterOnScreen()
 	preview = widget.NewLabel("empty!")
 	w.SetContent(preview)
 	go watchClipboard()
