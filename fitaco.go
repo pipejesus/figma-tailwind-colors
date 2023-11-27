@@ -46,12 +46,12 @@ func main() {
 		helpers.Pretty("@info", message)
 	}
 
+	ctx.Done()
+	fmt.Println(string(outputBytes))
 	clipboard.Write(clipboard.FmtText, outputBytes)
 }
 
 func watchClipboard() {
-	defer close(messagesChannel)
-
 	for data := range ch {
 		items = basecolors.Process(bytes.NewReader(data))
 
@@ -68,4 +68,5 @@ func watchClipboard() {
 	outputBytes, _ = json.MarshalIndent(items, "", "\t")
 
 	messagesChannel <- msgCopySuccess
+	close(messagesChannel)
 }
