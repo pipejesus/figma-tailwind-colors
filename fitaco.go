@@ -4,25 +4,25 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fitaco/internal/basecolors"
+	"fitaco/internal/helpers"
 	"fmt"
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
 	"golang.design/x/clipboard"
 	"os"
-	"totailwind/internal/basecolors"
 )
 
 var ctx context.Context
 var ch <-chan []byte
+var messagesChannel chan string
 var items basecolors.ColorMap
-var preview *widget.Label
-var button *widget.Button
+var outputBytes []byte
+var outputJs string
+var statusMsg string
+var status bool
 
-const msgGoToFigma = "Idź do Figmy i skopiuj styl CSS do schowka"
-const msgCopyResultToClipboard = "Skopiuj wynik do schowka"
-const msgColorsDetected = "Kolorwy zostały rozpoznane, gotowe!"
+const msgGoToFigma = "Czekam aż skopiujesz styl Piotra z Figmy do schowka"
+const msgCopySuccess = "Wynik skopiowany do schowka!"
+const msgColorsDetected = "Kolory zostały rozpoznane, gotowe!"
 const msgColorsNotDetected = "Styl CSS nie został rozpoznany :("
 
 func init() {
@@ -34,53 +34,38 @@ func init() {
 
 	ctx = context.TODO()
 	ch = clipboard.Watch(ctx, clipboard.FmtText)
-
+	messagesChannel = make(chan string)
 }
 
 func main() {
-	a := app.New()
-	a.Settings().Theme().Size("20")
-	w := a.NewWindow("Figma Tailwind Colors")
-	w.CenterOnScreen()
-
-	preview = widget.NewLabel(msgGoToFigma)
-	preview.Alignment = fyne.TextAlignCenter
-
-	button = widget.NewButton(msgCopyResultToClipboard, func() {
-		itemsJson, _ := json.MarshalIndent(items, "", "\t")
-		clipboard.Write(clipboard.FmtText, itemsJson)
-		button.Disable()
-		preview.SetText(msgGoToFigma)
-
-		ctx.Done()
-		ctx = context.TODO()
-		ch = clipboard.Watch(ctx, clipboard.FmtText)
-
-		go watchClipboard()
-	})
-	button.Disable()
-
-	w.SetContent(container.NewVBox(
-		preview,
-		button,
-	))
-
+	helpers.DisplayLogoNewProject()
+	helpers.Pretty("@todo", msgGoToFigma)
 	go watchClipboard()
-	w.ShowAndRun()
+
+	for message := range messagesChannel {
+		helpers.Pretty("@info", message)
+	}
+
+	clipboard.Write(clipboard.FmtText, outputBytes)
 }
 
 func watchClipboard() {
+	defer close(messagesChannel)
+
 	for data := range ch {
 		items = basecolors.Process(bytes.NewReader(data))
 
 		if len(items) < 1 {
-			preview.SetText(msgColorsNotDetected)
+			messagesChannel <- msgColorsNotDetected
+
 			continue
 		}
 
-		preview.SetText(msgColorsDetected)
-		button.Enable()
-
+		messagesChannel <- msgColorsDetected
 		break
 	}
+
+	outputBytes, _ = json.MarshalIndent(items, "", "\t")
+
+	messagesChannel <- msgCopySuccess
 }
